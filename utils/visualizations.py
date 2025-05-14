@@ -177,18 +177,32 @@ def create_artist_network(df, limit=50):
     if df.empty or len(df) < 10:
         return None
     
+    # Identificar las columnas correctas para artista y playlist
+    artist_column = None
+    playlist_column = None
+    
+    for col in df.columns:
+        if 'artist' in col.lower():
+            artist_column = col
+        elif 'playlist' in col.lower():
+            playlist_column = col
+    
+    # Si no encontramos las columnas, no podemos crear el gráfico
+    if not artist_column or not playlist_column:
+        return None
+    
     # Seleccionar los artistas más populares
-    top_artists = df.groupby('_artistname').size().sort_values(ascending=False).head(limit).index.tolist()
+    top_artists = df.groupby(artist_column).size().sort_values(ascending=False).head(limit).index.tolist()
     
     # Filtrar el dataframe para incluir solo los artistas populares
-    filtered_df = df[df['_artistname'].isin(top_artists)]
+    filtered_df = df[df[artist_column].isin(top_artists)]
     
     # Crear un diccionario para almacenar las conexiones entre artistas y playlists
     artist_playlist_connections = {}
     
     # Contar co-ocurrencias de artistas en las mismas playlists
-    for playlist in filtered_df['_playlistname'].unique():
-        artists_in_playlist = filtered_df[filtered_df['_playlistname'] == playlist]['_artistname'].unique()
+    for playlist in filtered_df[playlist_column].unique():
+        artists_in_playlist = filtered_df[filtered_df[playlist_column] == playlist][artist_column].unique()
         
         for i, artist1 in enumerate(artists_in_playlist):
             for artist2 in artists_in_playlist[i+1:]:

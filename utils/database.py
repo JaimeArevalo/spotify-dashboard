@@ -36,7 +36,13 @@ def get_spotify_data(limit=10000, sample=True):
             # Limitar la cantidad de documentos si no es una muestra
             data = list(collection.find().limit(limit))
             
-        return pd.DataFrame(data)
+        # Convertir a DataFrame y manejar las claves
+        df = pd.DataFrame(data)
+        
+        # Imprimir las columnas para depuración
+        print("Columnas encontradas en el DataFrame:", df.columns.tolist())
+        
+        return df
     except Exception as e:
         print(f"Error al obtener datos de Spotify: {str(e)}")
         return pd.DataFrame()
@@ -112,18 +118,33 @@ def get_user_stats():
     collection = db["spotify_dataset"]
     
     try:
+        # Identificar la columna de usuario
+        sample_doc = collection.find_one()
+        user_field = None
+        
+        if sample_doc:
+            for field in sample_doc:
+                if 'user' in field.lower():
+                    user_field = field
+                    break
+        
+        if not user_field:
+            user_field = "user_id"  # Nombre predeterminado
+            
+        print(f"Campo de usuario identificado: {user_field}")
+        
         # Número total de usuarios únicos
-        total_users = len(collection.distinct("user_id"))
+        total_users = len(collection.distinct(user_field))
         
         # Usuarios con más canciones
         top_users_pipeline = [
-            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+            {"$group": {"_id": f"${user_field}", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 20}
         ]
         
         top_users = list(collection.aggregate(top_users_pipeline))
-        top_users_df = pd.DataFrame(top_users, columns=["user_id", "count"]).rename(columns={"_id": "user_id"})
+        top_users_df = pd.DataFrame(top_users).rename(columns={"_id": "user_id"})
         
         return total_users, top_users_df
     except Exception as e:
@@ -137,17 +158,42 @@ def get_dataset_stats():
     collection = db["spotify_dataset"]
     
     try:
+        # Obtener y mostrar un documento de muestra para depuración
+        sample_doc = collection.find_one()
+        if sample_doc:
+            print("Estructura de un documento de muestra:")
+            for key in sample_doc:
+                print(f"  - {key}: {type(sample_doc[key])}")
+        
+        # Identificar los campos relevantes
+        user_field = artist_field = track_field = playlist_field = None
+        
+        for field in sample_doc:
+            if 'user' in field.lower():
+                user_field = field
+            elif 'artist' in field.lower():
+                artist_field = field
+            elif 'track' in field.lower():
+                track_field = field
+            elif 'playlist' in field.lower():
+                playlist_field = field
+        
+        print(f"Campos identificados: usuario={user_field}, artista={artist_field}, track={track_field}, playlist={playlist_field}")
+        
         # Total de registros
         total_records = collection.count_documents({})
         
-        # Total de artistas únicos
-        total_artists = len(collection.distinct("_artistname"))
+        # Total de artistas únicos (usar el campo identificado o un valor predeterminado)
+        artist_field = artist_field or "_artistname"
+        total_artists = len(collection.distinct(artist_field))
         
         # Total de canciones únicas
-        total_tracks = len(collection.distinct("_trackname"))
+        track_field = track_field or "_trackname"
+        total_tracks = len(collection.distinct(track_field))
         
         # Total de playlists únicas
-        total_playlists = len(collection.distinct("_playlistname"))
+        playlist_field = playlist_field or "_playlistname"
+        total_playlists = len(collection.distinct(playlist_field))
         
         return {
             "total_records": total_records,

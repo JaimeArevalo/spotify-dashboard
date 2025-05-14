@@ -10,16 +10,35 @@ def create_artist_bar_chart(df):
     """Crea un gráfico de barras de los artistas más populares"""
     if df.empty:
         return None
-        
+    
+    # Identificar la columna correcta para el nombre del artista
+    artist_column = None
+    for col in df.columns:
+        if 'artist' in col.lower():
+            artist_column = col
+            break
+    
+    if not artist_column:
+        # Si no encontramos una columna de artista, usamos la primera columna
+        artist_column = df.columns[0]
+    
+    # Identificar la columna de conteo
+    count_column = 'count'
+    if count_column not in df.columns:
+        for col in df.columns:
+            if 'count' in col.lower():
+                count_column = col
+                break
+    
     fig = px.bar(
         df,
-        x="count", 
-        y="artist",
+        x=count_column, 
+        y=artist_column,
         orientation='h',
-        color="count",
+        color=count_column,
         color_continuous_scale=px.colors.sequential.Viridis,
         title="Artistas más populares en Spotify",
-        labels={"count": "Número de canciones", "artist": "Artista"}
+        labels={count_column: "Número de canciones", artist_column: "Artista"}
     )
     
     fig.update_layout(
@@ -36,19 +55,44 @@ def create_playlist_bar_chart(df):
     """Crea un gráfico de barras de las playlists más populares"""
     if df.empty:
         return None
-        
+    
+    # Identificar la columna correcta para el nombre de la playlist
+    playlist_column = None
+    for col in df.columns:
+        if 'playlist' in col.lower():
+            playlist_column = col
+            break
+    
+    if not playlist_column:
+        # Si no encontramos una columna de playlist, usamos la primera columna
+        playlist_column = df.columns[0]
+    
+    # Crear una copia para no modificar el original
+    df_copy = df.copy()
+    
+    # Asegurarse de que la columna es de tipo string
+    df_copy[playlist_column] = df_copy[playlist_column].astype(str)
+    
     # Limitar el nombre de las playlists para mejor visualización
-    df['playlist_display'] = df['playlist'].str.slice(0, 30) + '...'
+    df_copy['playlist_display'] = df_copy[playlist_column].str.slice(0, 30) + '...'
+    
+    # Identificar la columna de conteo
+    count_column = 'count'
+    if count_column not in df.columns:
+        for col in df.columns:
+            if 'count' in col.lower():
+                count_column = col
+                break
     
     fig = px.bar(
-        df,
-        x="count", 
+        df_copy,
+        x=count_column, 
         y="playlist_display",
         orientation='h',
-        color="count",
+        color=count_column,
         color_continuous_scale=px.colors.sequential.Plasma,
         title="Playlists más populares en Spotify",
-        labels={"count": "Número de canciones", "playlist_display": "Playlist"}
+        labels={count_column: "Número de canciones", "playlist_display": "Playlist"}
     )
     
     fig.update_layout(
@@ -66,21 +110,40 @@ def create_users_pie_chart(df):
     if df.empty:
         return None
     
+    # Identificar la columna correcta para el ID de usuario
+    user_column = None
+    for col in df.columns:
+        if 'user' in col.lower():
+            user_column = col
+            break
+    
+    if not user_column:
+        # Si no encontramos una columna de usuario, usamos la primera columna
+        user_column = df.columns[0]
+    
+    # Identificar la columna de conteo
+    count_column = 'count'
+    if count_column not in df.columns:
+        for col in df.columns:
+            if 'count' in col.lower():
+                count_column = col
+                break
+    
     # Tomar los 10 principales usuarios
     top_10 = df.head(10).copy()
     # Agregar "Otros" para el resto
-    others_count = df['count'].sum() - top_10['count'].sum()
+    others_count = df[count_column].sum() - top_10[count_column].sum()
     
     if others_count > 0:
-        others = pd.DataFrame({"user_id": ["Otros"], "count": [others_count]})
+        others = pd.DataFrame({user_column: ["Otros"], count_column: [others_count]})
         df_pie = pd.concat([top_10, others], ignore_index=True)
     else:
         df_pie = top_10
     
     fig = px.pie(
         df_pie, 
-        values='count', 
-        names='user_id',
+        values=count_column, 
+        names=user_column,
         title='Distribución de usuarios por actividad',
         color_discrete_sequence=px.colors.qualitative.Pastel,
         hole=0.4

@@ -48,14 +48,27 @@ def get_top_artists(limit=20):
     collection = db["spotify_dataset"]
     
     try:
+        # Primero, identificar el nombre correcto de la columna del artista
+        sample_doc = collection.find_one()
+        artist_field = None
+        
+        if sample_doc:
+            for field in sample_doc:
+                if 'artist' in field.lower():
+                    artist_field = field
+                    break
+        
+        if not artist_field:
+            artist_field = "_artistname"  # Nombre predeterminado
+        
         pipeline = [
-            {"$group": {"_id": "$_artistname", "count": {"$sum": 1}}},
+            {"$group": {"_id": f"${artist_field}", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": limit}
         ]
         
         results = list(collection.aggregate(pipeline))
-        return pd.DataFrame(results, columns=["artist", "count"]).rename(columns={"_id": "artist"})
+        return pd.DataFrame(results).rename(columns={"_id": "artist"})
     except Exception as e:
         print(f"Error al obtener los artistas más populares: {str(e)}")
         return pd.DataFrame()
@@ -67,14 +80,27 @@ def get_top_playlists(limit=20):
     collection = db["spotify_dataset"]
     
     try:
+        # Primero, identificar el nombre correcto de la columna de la playlist
+        sample_doc = collection.find_one()
+        playlist_field = None
+        
+        if sample_doc:
+            for field in sample_doc:
+                if 'playlist' in field.lower():
+                    playlist_field = field
+                    break
+        
+        if not playlist_field:
+            playlist_field = "_playlistname"  # Nombre predeterminado
+        
         pipeline = [
-            {"$group": {"_id": "$_playlistname", "count": {"$sum": 1}}},
+            {"$group": {"_id": f"${playlist_field}", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": limit}
         ]
         
         results = list(collection.aggregate(pipeline))
-        return pd.DataFrame(results, columns=["playlist", "count"]).rename(columns={"_id": "playlist"})
+        return pd.DataFrame(results).rename(columns={"_id": "playlist"})
     except Exception as e:
         print(f"Error al obtener las playlists más populares: {str(e)}")
         return pd.DataFrame()

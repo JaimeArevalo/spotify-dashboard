@@ -266,10 +266,10 @@ def create_artist_network(df, limit=50):
             colorbar=dict(
                 thickness=15,
                 title='Conexiones',
-                xanchor='left',
-                titleside='right'
+                xanchor='left'
             ),
             line_width=2))
+
     
     # Contar el número de conexiones para cada nodo
     node_connections = {}

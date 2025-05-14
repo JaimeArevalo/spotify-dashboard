@@ -1,1 +1,1 @@
-web: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0
+web: python -c "import os; port = int(os.environ.get('PORT', 8501)); os.system(f'streamlit run app.py --server.port={port} --server.address=0.0.0.0')"
